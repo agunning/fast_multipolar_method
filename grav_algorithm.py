@@ -142,10 +142,10 @@ def run_grav_algorithm(sources,sinks,values, tottolerance, weights=None, deg=2,a
                 elif bf==2 and len(sourcen.labels)>d:
                     J[2]+=len(sinkn.labels)*len(sourcen.labels)
                     for i in range(0,deg+1):
-                        sinkn.deg[i]+=attn.exp_gun(wts.reshape((-1,1))*vals,+sources[sourcen.labels],sinkn.loc,0,i,d,2)
+                        sinkn.deg[i]+=attn.exp_fun(wts.reshape((-1,1))*vals,+sources[sourcen.labels],sinkn.loc,0,i,d,2)
                 else:
                     J[3]+=len(sinkn.labels)*len(sourcen.labels)
-                    output[sinkn.labels]+=attn.bf_fun(sources[sourcen.labels],sinks[sinkn.labels],weights[sourcen.labels],values[sourcen.labels])
+                    output[sinkn.labels]+=attn.bf_fun(sources[sourcen.labels],sinks[sinkn.labels],values[sourcen.labels],weights[sourcen.labels])
             if sinkn.no_leaves==0:
                 output[sinkn.labels]+=eval_powerseries(sinkn.deg,sinks[sinkn.labels]-sinkn.loc,deg)
             else:
@@ -161,8 +161,10 @@ def run_grav_algorithm(sources,sinks,values, tottolerance, weights=None, deg=2,a
             
         np.set_printoptions(suppress=False)
         print(J/J.sum())
-    return output
-
+    if (comparison_test is None):
+        return output
+    else:
+        return output,rel_errors
 
 
 
@@ -289,6 +291,14 @@ np.random.seed(0) #so we don't get new values every time we run this
 bk=np.load('bert-keys-mini.npy')/2**1.5
 bq=np.load('bert-queries-mini.npy')/2**1.5
 v=np.random.normal(size=(2**16,4))
+
+def test_error_decrease(k,values,eps=0.01):
+    den=denom(k)
+    bf_grav_output = bf_grav(bq[:k],bk[:k],values,np.exp((np.linalg.norm(bk[:k],axis=1)**2)/2))
+    output,precision = run_grav_algorithm(bq[:k],bk[:k],values=values,tottolerance=eps*den,weights=np.exp((np.linalg.norm(bk[:k],axis=1)**2)/2),comparison_test=bf_grav_output)
+    return output,precision
+    
+    
 
 def denom(k):
     return bf_denominator(bq[:k],bk[:k],np.exp((np.linalg.norm(bk[:k],axis=1)**2)/2))
